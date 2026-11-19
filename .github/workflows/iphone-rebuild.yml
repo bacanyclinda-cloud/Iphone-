@@ -46,8 +46,19 @@ jobs:
           source = file.read_text()
           old = 'manifestPlaceholders["appLabel"] = "Folio Dev"'
           assert old in source, "Expected source version changed. Do not patch blindly."
-          file.write_text(source.replace(old, 'manifestPlaceholders["appLabel"] = "iPhone Native Rebuild"'))
-          print("Updated launcher label; upstream license and source credits retained.")
+          file.write_text(source.replace(old, 'manifestPlaceholders["appLabel"] = "iPhone Native V2"'))
+          assert 'applicationIdSuffix = ".dev"' in file.read_text(), "Unexpected fast app ID"\n          updated = file.read_text().replace('applicationIdSuffix = ".dev"', 'applicationIdSuffix = ".nativev2"', 1)\n          file.write_text(updated)\n          print("Updated phone launcher label and separate install package; original source credited.")
+          PY
+
+      - name: Apply real bottom dock, phone layout and wallpaper gallery
+        run: |
+          python3 iphone-rebuild/patches/apply_phone_layout.py native-source
+          unzip -oq iphone-rebuild/assets/wallpaper-pack.zip -d native-source/app/src/main/assets
+          python3 - <<'PY'
+          from pathlib import Path
+          d = Path("native-source/app/src/main/assets/wallpapers")
+          assert len(list(d.glob("*.webp"))) >= 18, "Missing bundled wallpapers"
+          print("Verified",len(list(d.glob("*.webp"))),"offline artwork files.")
           PY
 
       - name: Compile optimized installable native Android APK
