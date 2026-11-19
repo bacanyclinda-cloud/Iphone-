@@ -1,4 +1,4 @@
-name: Build iPhone Native Rebuild (separate from Velocity)
+name: Build iPhone Native V3 (LoopPhone full Home + camera)
 
 on:
   workflow_dispatch:
@@ -46,9 +46,9 @@ jobs:
           source = file.read_text()
           old = 'manifestPlaceholders["appLabel"] = "Folio Dev"'
           assert old in source, "Expected source version changed. Do not patch blindly."
-          file.write_text(source.replace(old, 'manifestPlaceholders["appLabel"] = "iPhone Native V2"'))
+          file.write_text(source.replace(old, 'manifestPlaceholders["appLabel"] = "iPhone Native V3"'))
           assert 'applicationIdSuffix = ".dev"' in file.read_text(), "Unexpected fast app ID"
-          updated = file.read_text().replace('applicationIdSuffix = ".dev"', 'applicationIdSuffix = ".nativev2"', 1)
+          updated = file.read_text().replace('applicationIdSuffix = ".dev"', 'applicationIdSuffix = ".nativev3"', 1)
           file.write_text(updated)
           print("Updated phone launcher label and separate install package; original source credited.")
           PY
@@ -56,6 +56,7 @@ jobs:
       - name: Apply real bottom dock, phone layout and wallpaper gallery
         run: |
           python3 iphone-rebuild/patches/apply_phone_layout.py native-source
+          python3 iphone-rebuild/patches/apply_loopphone_v3.py native-source
           unzip -oq iphone-rebuild/assets/wallpaper-pack.zip -d native-source/app/src/main/assets
           python3 - <<'PY'
           from pathlib import Path
@@ -83,7 +84,7 @@ jobs:
       - name: Publish installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: iphone-native-rebuild-apk
+          name: iphone-native-v3-debug-apk
           path: iphone-native-rebuild.apk
           if-no-files-found: error
           retention-days: 30
@@ -108,7 +109,7 @@ jobs:
       - name: Publish source archive and license
         uses: actions/upload-artifact@v4
         with:
-          name: iphone-native-rebuild-source
+          name: iphone-native-v3-source
           path: iphone-native-rebuild-source.zip
           if-no-files-found: error
           retention-days: 30
