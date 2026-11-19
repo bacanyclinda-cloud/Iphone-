@@ -18,6 +18,9 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
@@ -166,7 +169,7 @@ public final class LauncherActivity extends Activity {
         super.onCreate(state);
         preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(parse("#090C13"));
+        getWindow().setNavigationBarColor(parse("#0C1426"));
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         if (Build.VERSION.SDK_INT >= 28) {
             WindowManager.LayoutParams lp = getWindow().getAttributes();
@@ -239,29 +242,55 @@ public final class LauncherActivity extends Activity {
     }
 
     private View appTile(ResolveInfo app) {
-        LinearLayout item = column(); item.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        ImageView image = new ImageView(this);
-        try { image.setImageDrawable(app.loadIcon(getPackageManager())); } catch (Exception ignored) {}
+        LinearLayout item=column();item.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
+        int iconDp=preferences.getInt("iconSize",60);
+        iconDp=Math.max(48,Math.min(68,iconDp));
+        FrameLayout holder=new FrameLayout(this);
+        holder.setBackground(shape(0x22FFFFFF,Math.round(iconDp*.23f),0));
+        holder.setClipToOutline(true);
+        ImageView image=new ImageView(this);
+        try{image.setImageDrawable(app.loadIcon(getPackageManager()));}catch(Exception ignored){}
         image.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        item.addView(image,ll(d(56),d(56)));
-        TextView label = text(app.loadLabel(getPackageManager()).toString(),11,false,Color.WHITE);
-        label.setGravity(Gravity.CENTER); label.setMaxLines(1); label.setEllipsize(TextUtils.TruncateAt.END);
-        label.setShadowLayer(d(4),0,d(2),Color.BLACK);
-        LinearLayout.LayoutParams nameP = ll(-1,d(22)); nameP.topMargin=d(5);
+        String style=preferences.getString("iconStyle","original");
+        if("mono".equals(style)) {
+            ColorMatrix matrix=new ColorMatrix();matrix.setSaturation(0f);
+            image.setColorFilter(new ColorMatrixColorFilter(matrix));
+            holder.setBackground(shape(0xB91C2B43,Math.round(iconDp*.23f),0x22FFFFFF));
+        }else if("clear".equals(style)){
+            holder.setBackground(shape(0x40FFFFFF,Math.round(iconDp*.23f),0x44FFFFFF));
+            holder.setAlpha(.94f);
+        }
+        holder.addView(image,new FrameLayout.LayoutParams(-1,-1));
+        item.addView(holder,ll(d(iconDp),d(iconDp)));
+        TextView label=text(app.loadLabel(getPackageManager()).toString(),11,false,Color.WHITE);
+        label.setGravity(Gravity.CENTER);label.setMaxLines(1);
+        label.setEllipsize(TextUtils.TruncateAt.END);
+        label.setShadowLayer(d(3),0,d(1),0xC8000000);
+        LinearLayout.LayoutParams nameP=ll(-1,d(20));nameP.topMargin=d(5);
         item.addView(label,nameP);
+        item.setContentDescription("Open "+app.loadLabel(getPackageManager()));
         item.setOnClickListener(v->launchApp(app));
+        item.setOnLongClickListener(v->{
+            new android.app.AlertDialog.Builder(this)
+                .setTitle(app.loadLabel(getPackageManager()))
+                .setItems(new String[]{"Open","App info"},(dialog,which)->{
+                    if(which==0)launchApp(app);
+                    else try{startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:"+app.activityInfo.packageName)));}catch(Exception ignored){}
+                }).show();return true;
+        });
         return item;
     }
 
-    private GridLayout iconsGrid(List<ResolveInfo> data) {
-        GridLayout grid = new GridLayout(this);
-        grid.setColumnCount(4); grid.setUseDefaultMargins(false);
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int width = (screenWidth - d(40)) / 4;
-        for (ResolveInfo r : data) {
-            GridLayout.LayoutParams p = new GridLayout.LayoutParams();
-            p.width=width; p.height=d(103); p.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-            grid.addView(appTile(r),p);
+    private GridLayout iconsGrid(List<ResolveInfo> data){
+        GridLayout grid=new GridLayout(this);grid.setColumnCount(4);grid.setUseDefaultMargins(false);
+        int screenWidth=getResources().getDisplayMetrics().widthPixels;
+        int width=Math.max(d(67),(screenWidth-d(28))/4);
+        for(ResolveInfo r:data){
+            GridLayout.LayoutParams params=new GridLayout.LayoutParams();
+            params.width=width;params.height=d(preferences.getInt("iconSize",60)+37);
+            params.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
+            grid.addView(appTile(r),params);
         }
         return grid;
     }
@@ -326,46 +355,65 @@ public final class LauncherActivity extends Activity {
     }
     private View homePage() {
         LinearLayout body=pageBase();
-        body.setPadding(d(21),d(75),d(21),d(135));
-        TextView date=text(new SimpleDateFormat("EEEE, d MMMM",Locale.getDefault()).format(new Date()),14,true,white(226));
-        date.setShadowLayer(d(3),0,d(2),Color.BLACK);body.addView(date);
-        addSpace(body,18);
-        LinearLayout widgets=row();
-        widgets.addView(widget("CLOCK","--:--","Local time"),new LinearLayout.LayoutParams(0,d(124),1));
-        View gap=new View(this);widgets.addView(gap,ll(d(11),1));
-        widgets.addView(widget("BATTERY","--%","This device"),new LinearLayout.LayoutParams(0,d(124),1));
-        body.addView(widgets);
-        addSpace(body,21);
-        LinearLayout headingRow=row();
-        headingRow.addView(text("Home",14,true,Color.WHITE),new LinearLayout.LayoutParams(0,-2,1));
-        TextView all=text("All Apps  ›",13,true,white(236));all.setOnClickListener(v->pager.goTo(1));headingRow.addView(all);
-        body.addView(headingRow);addSpace(body,14);
-        // Use real installed launchable app icons, in familiar phone-first order.
-        List<ResolveInfo> homeApps=new ArrayList<>();
-        String[] favourites={"phone","message","whatsapp","camera","photos","gallery","chrome","settings",
-                "clock","calculator","maps","youtube","spotify","music","files","calendar","contacts","play store","gmail","weather"};
-        for(String term:favourites){
-            for(ResolveInfo info:installed){
-                String name=info.loadLabel(getPackageManager()).toString().toLowerCase(Locale.ROOT);
-                if(name.contains(term) && !homeApps.contains(info)){homeApps.add(info);break;}
-            }
-        }
-        for(ResolveInfo info:installed){if(homeApps.size()>=20)break;if(!homeApps.contains(info))homeApps.add(info);}
-        body.addView(iconsGrid(homeApps));
+        body.setPadding(d(13),d(70),d(13),d(130));
+        // The launcher's home screen follows the familiar four-column iPhone spacing.
+        // No fake logos or cartoon illustrations: each app uses its real package icon.
+        LinearLayout top=row();top.setPadding(d(8),0,d(8),0);
+        TextView date=text(new SimpleDateFormat("EEEE  d MMMM",Locale.getDefault()).format(new Date()),14,true,Color.WHITE);
+        date.setShadowLayer(d(2),0,d(1),0xBB000000);
+        top.addView(date,new LinearLayout.LayoutParams(0,d(25),1));
+        TextView edit=text("Edit",13,true,Color.WHITE);
+        edit.setPadding(d(12),d(6),d(12),d(6));
+        edit.setGravity(Gravity.CENTER);
+        edit.setBackground(shape(0x44FFFFFF,18,0x33FFFFFF));
+        edit.setOnClickListener(v->pager.goTo(3));top.addView(edit);
+        body.addView(top);
         addSpace(body,13);
-        body.addView(action("Wallpaper & Home settings",v->pager.goTo(3)));
+        if(preferences.getBoolean("showWidget",true)){
+            LinearLayout card=column();card.setPadding(d(19),d(15),d(19),d(13));
+            card.setBackground(gradient(0xA944566E,0x9745517E,24));
+            LinearLayout first=row();
+            TextView title=text("BATTERIES",12,true,Color.WHITE);title.setLetterSpacing(.07f);
+            first.addView(title,new LinearLayout.LayoutParams(0,d(27),1));
+            TextView icon=text("◉",21,false,Color.WHITE);first.addView(icon);
+            card.addView(first);
+            LinearLayout batteryRow=row();
+            TextView batteryIcon=text("▰",37,true,0xFF78EA9F);
+            batteryIcon.setGravity(Gravity.CENTER);
+            batteryRow.addView(batteryIcon,ll(d(62),d(60)));
+            LinearLayout info=column();info.setGravity(Gravity.CENTER_VERTICAL);
+            widgetBattery=text("--%",26,true,Color.WHITE);info.addView(widgetBattery);
+            TextView subtitle=text("This Android device",12,false,white(220));info.addView(subtitle);
+            batteryRow.addView(info);card.addView(batteryRow);
+            LinearLayout.LayoutParams cp=ll(-1,d(126));cp.leftMargin=d(4);cp.rightMargin=d(4);
+            body.addView(card,cp);
+            addSpace(body,19);
+        }else addSpace(body,22);
+        List<ResolveInfo> favourites=preferredHomeApps(24);
+        body.addView(iconsGrid(favourites));
+        addSpace(body,16);
+        TextView search=action("Search all installed apps",v->pager.goTo(1));
+        search.setBackground(shape(0x4DFFFFFF,21,0x33FFFFFF));
+        body.addView(search);
         return scroll(body);
     }
-    private View widget(String title,String value,String note) {
-        LinearLayout box=column();box.setPadding(d(15),d(14),d(12),d(12));
-        box.setBackground(gradient(parse("#99657EAA"),parse("#8E1D2D56"),23));
-        TextView a=text(title,10,true,white(210));a.setLetterSpacing(.10f);box.addView(a);
-        TextView b=text(value,27,true,Color.WHITE);LinearLayout.LayoutParams bp=ll(-1,d(44));bp.topMargin=d(5);box.addView(b,bp);
-        if (title.equals("CLOCK")) widgetTime=b;
-        if (title.equals("BATTERY")) widgetBattery=b;
-        box.addView(text(note,11,false,white(190)));
-        return box;
+
+    private List<ResolveInfo> preferredHomeApps(int maximum){
+        List<ResolveInfo> chosen=new ArrayList<>();
+        String[] preferred={"phone","message","camera","photos","gallery","weather","calendar",
+           "clock","maps","whatsapp","chrome","settings","music","spotify","youtube","gmail",
+           "files","notes","contacts","calculator","play store","wallet","health","gallery","discord"};
+        for(String match:preferred){
+            for(ResolveInfo r:installed){
+                String label=r.loadLabel(getPackageManager()).toString().toLowerCase(Locale.ROOT);
+                if(label.contains(match)&&!chosen.contains(r)){chosen.add(r);break;}
+            }
+            if(chosen.size()>=maximum)break;
+        }
+        for(ResolveInfo r:installed){if(chosen.size()>=maximum)break;if(!chosen.contains(r))chosen.add(r);}
+        return chosen;
     }
+
     private View appsPage() {
         LinearLayout body=pageBase();
         body.addView(heading("Apps"));addSpace(body,7);
@@ -390,8 +438,8 @@ public final class LauncherActivity extends Activity {
     }
     private View garagePage() {
         LinearLayout body=pageBase();
-        body.addView(text("VELOCITY  /  GARAGE",11,true,white(210)));addSpace(body,8);
-        body.addView(heading("Your essentials"));addSpace(body,7);
+        body.addView(text("WIDGETS  /  SHORTCUTS",11,true,white(210)));addSpace(body,8);
+        body.addView(heading("Today View"));addSpace(body,7);
         body.addView(text("Tools that use your phone's actual hardware and apps.",13,false,white(200)));
         addSpace(body,24);
         body.addView(settingsRow("Flashlight", "Toggle the phone camera torch", "Turn on", v->toggleTorch()));
@@ -422,43 +470,82 @@ public final class LauncherActivity extends Activity {
         return parent;
     }
     private View settingsPage() {
-        LinearLayout body=pageBase();
-        body.addView(heading("Launcher settings"));addSpace(body,8);
-        body.addView(text("Native controls · calibrated to this screen",13,false,white(210)));
-        addSpace(body,19);
-        body.addView(settingsRow("Default Home app", "Choose Velocity as your Android launcher", "Set", v->requestHomeRole()));
+        LinearLayout body=pageBase();body.setPadding(d(17),d(76),d(17),d(145));
+        body.addView(heading("Settings"));addSpace(body,6);
+        body.addView(text("Personalize your Home screen",13,false,white(230)));
+        addSpace(body,21);
+        body.addView(groupHeading("APPEARANCE"));addSpace(body,10);
+        body.addView(settingsRow("Wallpaper Gallery","Browse real offline images and choose your favorite","›",v->startActivity(new Intent(this,WallpaperGalleryActivity.class))));
+        addSpace(body,9);
+        body.addView(settingsRow("Choose from my photos","Apply a picture stored on your phone","›",v->openGallery()));
+        addSpace(body,13);
+        body.addView(text("APP ICON APPEARANCE",12,true,white(230)));addSpace(body,8);
+        LinearLayout choices=row();
+        for(String[] option:new String[][]{{"Original","original"},{"Dark","mono"},{"Clear","clear"}}){
+            boolean chosen=option[1].equals(preferences.getString("iconStyle","original"));
+            TextView b=text(option[0]+(chosen?" ✓":""),13,true,Color.WHITE);
+            b.setGravity(Gravity.CENTER);
+            b.setBackground(shape(chosen?0xCB347EC4:0x70485370,18,0x55FFFFFF));
+            LinearLayout.LayoutParams param=new LinearLayout.LayoutParams(0,d(47),1);
+            param.rightMargin=d(7);choices.addView(b,param);
+            b.setOnClickListener(v->{
+                preferences.edit().putString("iconStyle",option[1]).apply();
+                createUi();pager.goTo(3);
+            });
+        }
+        body.addView(choices);addSpace(body,13);
+        body.addView(text("APP ICON SIZE",12,true,white(222)));addSpace(body,7);
+        LinearLayout sizes=row();
+        for(int size:new int[]{52,60,66}){
+            String label=size==52?"Small":size==60?"Normal":"Large";
+            boolean chosen=preferences.getInt("iconSize",60)==size;
+            TextView b=text(label+(chosen?" ✓":""),13,true,Color.WHITE);
+            b.setGravity(Gravity.CENTER);
+            b.setBackground(shape(chosen?0xCB347EC4:0x70485370,18,0x55FFFFFF));
+            LinearLayout.LayoutParams param=new LinearLayout.LayoutParams(0,d(44),1);
+            param.rightMargin=d(7);sizes.addView(b,param);
+            b.setOnClickListener(v->{
+                preferences.edit().putInt("iconSize",size).apply();createUi();pager.goTo(3);
+            });
+        }
+        body.addView(sizes);addSpace(body,14);
+        body.addView(settingsRow("Battery widget",preferences.getBoolean("showWidget",true)?"Visible on Home":"Hidden from Home",
+                preferences.getBoolean("showWidget",true)?"On":"Off",v->{
+                    boolean yes=preferences.getBoolean("showWidget",true);
+                    preferences.edit().putBoolean("showWidget",!yes).apply();createUi();pager.goTo(3);
+                }));
+        addSpace(body,23);
+        body.addView(groupHeading("CONTROLS & PERMISSIONS"));addSpace(body,10);
+        body.addView(settingsRow("Control Centre","Brightness, volume, torch, Wi-Fi and Focus","›",v->showControlCenter()));
+        addSpace(body,8);
+        body.addView(settingsRow("Notification Centre","Real app alerts after notification access","›",v->showNotifications()));
+        addSpace(body,8);
+        body.addView(settingsRow("Notification access","Enable Android notification listener","›",v->requestNotificationAccess()));
+        addSpace(body,8);
+        body.addView(settingsRow("System Settings","Open the actual Android Settings app","›",v->openSystemSettings()));
+        addSpace(body,8);
+        body.addView(settingsRow("Default Home app","Choose this app as your Home launcher","›",v->requestHomeRole()));
+        addSpace(body,23);
+        body.addView(groupHeading("DYNAMIC ISLAND · CAMERA FIT"));addSpace(body,9);
+        cutoffLabel=text("Detecting the front camera cutout…",12,false,white(210));
+        body.addView(cutoffLabel);addSpace(body,11);
+        body.addView(sliderRow("Move left / right","x",-80,80));
+        body.addView(sliderRow("Move up / down","y",-24,60));
+        body.addView(sliderRow("Width correction","w",-40,110));
+        body.addView(sliderRow("Height correction","h",-18,45));
         addSpace(body,10);
-        body.addView(settingsRow("Notification access", "Allow reading active local Android notifications", "Grant", v->requestNotificationAccess()));
-        addSpace(body,10);
-        body.addView(settingsRow("Control Centre", "Open the interactive quick controls", "Open", v->showControlCenter()));
-        addSpace(body,10);
-        body.addView(settingsRow("Full brightness permission", "Allow the slider to set brightness outside the launcher", "Grant", v->requestBrightnessPermission()));
-        addSpace(body,10);
-        body.addView(settingsRow("System Settings", "Open your phone's actual Settings app", "Open", v->openSystemSettings()));
-        addSpace(body,25);
-        body.addView(text("WALLPAPERS",12,true,white(225)));addSpace(body,8);
-        body.addView(text("24 original offline glass wallpapers, 10 downloadable car photos, and your gallery.",12,false,white(190)));
-        addSpace(body,11);
-        body.addView(wallpaperPicker());addSpace(body,10);
-        body.addView(action("Choose photo from my gallery",v->openGallery()));addSpace(body,11);
-        body.addView(text("Photo packs download over HTTPS and are cached on your phone.",11,false,white(158)));
-        addSpace(body,26);
-        body.addView(text("DYNAMIC ISLAND / CAMERA",12,true,white(225)));addSpace(body,10);
-        cutoffLabel=text("Detecting display cutout…",12,false,white(180));body.addView(cutoffLabel);
-        addSpace(body,11);
-        body.addView(sliderRow("Horizontal correction", "x", -80,80));
-        body.addView(sliderRow("Vertical correction", "y", -24,60));
-        body.addView(sliderRow("Additional width", "w", -40,110));
-        body.addView(sliderRow("Additional height", "h", -18,45));
-        addSpace(body,12);
         body.addView(action("Reset camera alignment",v->{
             preferences.edit().putInt("x",0).putInt("y",0).putInt("w",0).putInt("h",0).apply();
-            pager.goTo(3);createUi();pager.goTo(3);toast("Camera alignment reset");
+            createUi();pager.goTo(3);toast("Camera alignment reset");
         }));
         addSpace(body,12);
-        TextView limit=text("Some phones report a camera cutout rectangle, not an exact lens outline. The correction sliders let you align the Island precisely.",12,false,white(165));
-        limit.setLineSpacing(d(4),1f);body.addView(limit);addSpace(body,18);
+        TextView hint=text("Android reports the display cutout when available. Use the sliders if the reported area is not exact.",12,false,white(185));
+        hint.setLineSpacing(d(3),1);body.addView(hint);
         return scroll(body);
+    }
+    private TextView groupHeading(String title){
+        TextView t=text(title,12,true,white(212));t.setLetterSpacing(.08f);
+        t.setPadding(d(9),0,0,0);return t;
     }
 
     private View sliderRow(String label,String pref,int min,int max) {
@@ -521,7 +608,14 @@ public final class LauncherActivity extends Activity {
     }
     private void renderWallpaper() {
         if(wallpaper == null)return;
-        String selected=preferences.getString("wallpaper","theme:12");
+        String selected=preferences.getString("wallpaper","theme:0");
+        if(selected.startsWith("pack:")){
+            try{
+                int n=Integer.parseInt(selected.substring(5));
+                Drawable packed=WallpaperPack.full(this,n);
+                if(packed!=null){wallpaper.setImageDrawable(packed);return;}
+            }catch(Exception ignored){}
+        }
         if(selected.startsWith("photo:")){
             try {
                 int index=Integer.parseInt(selected.substring(6));
@@ -582,13 +676,13 @@ public final class LauncherActivity extends Activity {
 
     private void buildDock() {
         LinearLayout dock = row(); dock.setGravity(Gravity.CENTER);
-        dock.setPadding(d(13),d(11),d(13),d(11));
-        dock.setBackground(shape(parse("#853A485A"),29,white(70)));
+        dock.setPadding(d(10),d(10),d(10),d(10));
+        dock.setBackground(shape(parse("#70C7DAED"),29,white(80)));
         FrameLayout.LayoutParams dockP=fl(-1,d(83),Gravity.BOTTOM);
         dockP.leftMargin=d(13);dockP.rightMargin=d(13);dockP.bottomMargin=d(18);
         root.addView(dock,dockP);
         List<ResolveInfo> chosen=new ArrayList<>();
-        String[] terms={"phone","message","chrome","camera"};
+        String[] terms={"phone","message","chrome","music"};
         for(String t:terms)for(ResolveInfo r:installed){
             String label=r.loadLabel(getPackageManager()).toString().toLowerCase(Locale.ROOT);
             if(label.contains(t) && !chosen.contains(r)){chosen.add(r);break;}
@@ -598,7 +692,7 @@ public final class LauncherActivity extends Activity {
             ImageView image=new ImageView(this);image.setImageDrawable(r.loadIcon(getPackageManager()));
             image.setScaleType(ImageView.ScaleType.FIT_CENTER);
             LinearLayout shell = row();shell.setGravity(Gravity.CENTER);
-            shell.addView(image,ll(d(55),d(55)));
+            shell.addView(image,ll(d(58),d(58)));
             dock.addView(shell,new LinearLayout.LayoutParams(0,-1,1));shell.setOnClickListener(v->launchApp(r));
         }
     }
@@ -829,7 +923,7 @@ public final class LauncherActivity extends Activity {
         TextView brand=text("VELOCITY",14,true,parse("#94D4FF"));brand.setLetterSpacing(.3f);body.addView(brand);
         addSpace(body,19);body.addView(text("Make this phone yours.",34,true,Color.WHITE));
         addSpace(body,11);TextView detail=text("A real Android home launcher, fitted to your display and built around your installed apps.",15,false,white(215));
-        detail.setLineSpacing(d(5),1f);body.addView(detail);addSpace(body,33);
+        detail.setLineSpacing(d(5),1f);body.addView(detail);addSpace(body,22);
         android.util.DisplayMetrics metrics=getResources().getDisplayMetrics();
         body.addView(text("Screen: "+metrics.widthPixels+" × "+metrics.heightPixels+" px  ·  Density: "+metrics.densityDpi+" dpi",12,false,white(210)));
         addSpace(body,11);
@@ -843,6 +937,7 @@ public final class LauncherActivity extends Activity {
         body.addView(settingsRow("4. Control Centre", "Swipe down from the top-right for quick controls. Top-left opens alerts.","Open",v->showControlCenter()));
         addSpace(body,27);
         body.addView(text("Choose wallpaper after setup",13,true,white(210)));addSpace(body,10);
+        body.addView(action("Browse 120 offline wallpapers", v->startActivity(new Intent(this, WallpaperGalleryActivity.class))));addSpace(body,12);
         body.addView(wallpaperPicker());addSpace(body,23);
         TextView done=action("Finish setup and open launcher",v->{
             preferences.edit().putBoolean("setupComplete",true).apply();setupLayer.setVisibility(View.GONE);pager.goTo(0);
