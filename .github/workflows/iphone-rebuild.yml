@@ -47,7 +47,10 @@ jobs:
           old = 'manifestPlaceholders["appLabel"] = "Folio Dev"'
           assert old in source, "Expected source version changed. Do not patch blindly."
           file.write_text(source.replace(old, 'manifestPlaceholders["appLabel"] = "iPhone Native V2"'))
-          assert 'applicationIdSuffix = ".dev"' in file.read_text(), "Unexpected fast app ID"\n          updated = file.read_text().replace('applicationIdSuffix = ".dev"', 'applicationIdSuffix = ".nativev2"', 1)\n          file.write_text(updated)\n          print("Updated phone launcher label and separate install package; original source credited.")
+          assert 'applicationIdSuffix = ".dev"' in file.read_text(), "Unexpected fast app ID"
+          updated = file.read_text().replace('applicationIdSuffix = ".dev"', 'applicationIdSuffix = ".nativev2"', 1)
+          file.write_text(updated)
+          print("Updated phone launcher label and separate install package; original source credited.")
           PY
 
       - name: Apply real bottom dock, phone layout and wallpaper gallery
