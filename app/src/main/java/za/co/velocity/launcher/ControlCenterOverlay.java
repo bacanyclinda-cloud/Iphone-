@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Rect;
 import android.graphics.Shader;
 import android.graphics.RenderEffect;
 import android.graphics.drawable.Drawable;
@@ -82,7 +83,7 @@ final class ControlCenterOverlay extends FrameLayout {
         if(wallpaper!=null) blurredWall.setImageDrawable(wallpaper);
         if(Build.VERSION.SDK_INT>=31)blurredWall.setRenderEffect(RenderEffect.createBlurEffect(d(42),d(42),Shader.TileMode.CLAMP));
         addView(blurredWall,new FrameLayout.LayoutParams(-1,-1));
-        View tint=new View(activity);tint.setBackgroundColor(c("#D81B2741"));addView(tint,new FrameLayout.LayoutParams(-1,-1));
+        View tint=new View(activity);tint.setBackgroundColor(c("#B91A273A"));addView(tint,new FrameLayout.LayoutParams(-1,-1));
         ScrollView scroll=new ScrollView(activity);
         scroll.setFillViewport(false);scroll.setVerticalScrollBarEnabled(false);scroll.setClipToPadding(false);
         FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(-1,-1);
@@ -90,7 +91,7 @@ final class ControlCenterOverlay extends FrameLayout {
         LinearLayout body=vertical();body.setPadding(d(19),d(27),d(19),d(30));
         scroll.addView(body,new ScrollView.LayoutParams(-1,-2));
         LinearLayout header=horizontal();
-        TextView title=label("Control Centre",27,true,Color.WHITE);
+        TextView title=label("Control Centre",26,true,Color.WHITE);
         header.addView(title,new LinearLayout.LayoutParams(0,d(48),1));
         TextView close=label("Done",14,true,white(240));close.setGravity(Gravity.CENTER);
         close.setBackground(glass(0x84536A86,16));close.setPadding(d(16),d(9),d(16),d(9));
@@ -99,20 +100,20 @@ final class ControlCenterOverlay extends FrameLayout {
 
         LinearLayout top=horizontal();top.setGravity(Gravity.TOP);
         LinearLayout connections=vertical();connections.setPadding(d(12),d(12),d(12),d(10));
-        connections.setBackground(glass(0xA14B5B78,25));
-        LinearLayout first=horizontal();first.addView(shortcut("Wi-Fi","⌁",()->openIntent(new Intent(Build.VERSION.SDK_INT>=29?Settings.Panel.ACTION_WIFI:Settings.ACTION_WIFI_SETTINGS))),weight(68));
-        first.addView(shortcut("Bluetooth","ᛒ",()->openIntent(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS))),weight(68));
+        connections.setBackground(glass(0x8C556783,25));
+        LinearLayout first=horizontal();first.addView(shortcut("Wi-Fi","wifi",()->openIntent(new Intent(Build.VERSION.SDK_INT>=29?Settings.Panel.ACTION_WIFI:Settings.ACTION_WIFI_SETTINGS))),weight(68));
+        first.addView(shortcut("Bluetooth","bluetooth",()->openIntent(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS))),weight(68));
         connections.addView(first);spacing(connections,5);
-        LinearLayout second=horizontal();second.addView(shortcut("Mobile","▥",()->openIntent(new Intent(Settings.ACTION_WIRELESS_SETTINGS))),weight(68));
-        second.addView(shortcut("Airplane","✈",()->openIntent(new Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS))),weight(68));
+        LinearLayout second=horizontal();second.addView(shortcut("Mobile","cellular",()->openIntent(new Intent(Settings.ACTION_WIRELESS_SETTINGS))),weight(68));
+        second.addView(shortcut("Airplane","airplane",()->openIntent(new Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS))),weight(68));
         connections.addView(second);
         LinearLayout.LayoutParams cp=weight(161);cp.rightMargin=d(10);top.addView(connections,cp);
 
-        LinearLayout music=vertical();music.setPadding(d(13),d(14),d(13),d(11));music.setBackground(glass(0xA84A5872,25));
+        LinearLayout music=vertical();music.setPadding(d(13),d(14),d(13),d(11));music.setBackground(glass(0x8C556783,25));
         music.addView(label("MEDIA",10,true,white(195)));
         spacing(music,9);music.addView(label("Not Playing",16,true,Color.WHITE));
         spacing(music,6);TextView hint=label("Open music app",12,false,white(210));hint.setMaxLines(2);music.addView(hint);
-        spacing(music,15);TextView play=label("◀    ▶    ▶▶",21,true,white(245));play.setGravity(Gravity.CENTER);
+        spacing(music,15);TextView play=label("❮      ▶      ❯",21,true,white(245));play.setGravity(Gravity.CENTER);
         play.setBackground(glass(0x7A425D7C,16));play.setOnClickListener(v->callbacks.onOpenMusic());
         music.addView(play,new LinearLayout.LayoutParams(-1,d(42)));
         top.addView(music,weight(161));body.addView(top);
@@ -127,18 +128,18 @@ final class ControlCenterOverlay extends FrameLayout {
         mid.addView(volumeCard,weight(206));body.addView(mid);spacing(body,11);
 
         LinearLayout actions=horizontal();
-        LinearLayout torch=actionTile("Torch","♜",()->{callbacks.onTorch(); if(torchText!=null)torchText.setText(callbacks.isTorchOn()?"Torch On":"Torch");});
+        LinearLayout torch=actionTile("Torch","torch",()->{callbacks.onTorch(); if(torchText!=null)torchText.setText(callbacks.isTorchOn()?"Torch On":"Torch");});
         torchText=(TextView)torch.getChildAt(1);torchText.setText(callbacks.isTorchOn()?"Torch On":"Torch");
-        LinearLayout dnd=actionTile("Focus","☾",this::toggleFocus);
-        LinearLayout battery=actionTile("Battery","▰",()->openIntent(new Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)));
-        LinearLayout settings=actionTile("Settings","⚙",callbacks::onAndroidSettings);
+        LinearLayout dnd=actionTile("Focus","moon",this::toggleFocus);
+        LinearLayout battery=actionTile("Battery","battery",()->openIntent(new Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)));
+        LinearLayout settings=actionTile("Settings","settings",callbacks::onAndroidSettings);
         actions.addView(torch,weight(93));actions.addView(dnd,weight(93));actions.addView(battery,weight(93));actions.addView(settings,weight(93));body.addView(actions);
         spacing(body,11);
 
         LinearLayout bottom=horizontal();
-        TextView notifications=wideTile("Notifications", "Real alerts from your apps", "▣",()->{close();callbacks.onNotifications();});
+        View notifications=wideTile("Notifications", "Your app alerts", "bell",()->{close();callbacks.onNotifications();});
         LinearLayout.LayoutParams np=weight(75);np.rightMargin=d(10);bottom.addView(notifications,np);
-        TextView device=wideTile("Screen control", "Brightness permission", "☼",this::requestGlobalBrightness);
+        View device=wideTile("Display", "Brightness access", "brightness",this::requestGlobalBrightness);
         bottom.addView(device,weight(75));body.addView(bottom);
         spacing(body,13);
         TextView fineprint=label("Wi-Fi, Bluetooth, mobile data and flight mode open Android's own settings, because third-party launchers cannot silently change every protected system setting.",11,false,white(180));
@@ -148,33 +149,97 @@ final class ControlCenterOverlay extends FrameLayout {
     boolean opened(){return getVisibility()==VISIBLE;}
 
     private LinearLayout shortcut(String caption,String symbol,Runnable click) {
-        LinearLayout b=vertical();b.setGravity(Gravity.CENTER);b.setPadding(d(4),d(4),d(4),d(3));
-        TextView ico=label(symbol,23,true,Color.WHITE);ico.setGravity(Gravity.CENTER);
-        ico.setBackground(glass(0xAA5C86BF,15));b.addView(ico,new LinearLayout.LayoutParams(d(39),d(39)));
-        spacing(b,5);TextView label=label(caption,10,true,white(248));label.setGravity(Gravity.CENTER);
+        LinearLayout b=vertical();b.setGravity(Gravity.CENTER);b.setPadding(d(3),d(3),d(3),d(4));
+        FrameLayout tile=new FrameLayout(activity);
+        tile.setBackground(glass(0xCF337BD3,18));
+        tile.addView(new GlyphIcon(activity,symbol),new FrameLayout.LayoutParams(-1,-1));
+        b.addView(tile,new LinearLayout.LayoutParams(d(46),d(46)));
+        spacing(b,5);
+        TextView label=label(caption,11,true,white(246));label.setGravity(Gravity.CENTER);
         label.setSingleLine(true);label.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        b.addView(label,new LinearLayout.LayoutParams(-1,d(19)));b.setOnClickListener(v->click.run());return b;
+        b.addView(label,new LinearLayout.LayoutParams(-1,d(19)));
+        b.setOnClickListener(v->click.run());return b;
     }
     private LinearLayout levelCard(String caption,VerticalLevel level) {
         LinearLayout box=vertical();box.setGravity(Gravity.CENTER);box.setPadding(d(15),d(12),d(15),d(10));
-        box.setBackground(glass(0x865E7899,24));
+        box.setBackground(glass(0x88647488,24));
         box.addView(level,new LinearLayout.LayoutParams(d(62),d(150)));
         spacing(box,10);TextView text=label(caption,13,true,white(245));text.setGravity(Gravity.CENTER);
         box.addView(text,new LinearLayout.LayoutParams(-1,d(20)));
         return box;
     }
     private LinearLayout actionTile(String caption,String symbol,Runnable click) {
-        LinearLayout box=vertical();box.setGravity(Gravity.CENTER);box.setPadding(d(4),d(7),d(4),d(5));
-        box.setBackground(glass(0x9D4A5C78,18));
-        TextView ico=label(symbol,25,true,Color.WHITE);ico.setGravity(Gravity.CENTER);box.addView(ico,new LinearLayout.LayoutParams(-1,d(47)));
-        TextView lbl=label(caption,10,true,white(245));lbl.setGravity(Gravity.CENTER);lbl.setSingleLine(true);
-        lbl.setEllipsize(android.text.TextUtils.TruncateAt.END);box.addView(lbl,new LinearLayout.LayoutParams(-1,d(23)));
+        LinearLayout box=vertical();box.setGravity(Gravity.CENTER);box.setPadding(d(5),d(6),d(5),d(5));
+        box.setBackground(glass(0x94546477,18));
+        box.addView(new GlyphIcon(activity,symbol),new LinearLayout.LayoutParams(d(37),d(37)));
+        TextView lbl=label(caption,10,true,white(245));lbl.setGravity(Gravity.CENTER);
+        lbl.setSingleLine(true);lbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        box.addView(lbl,new LinearLayout.LayoutParams(-1,d(23)));
         box.setOnClickListener(v->click.run());return box;
     }
-    private TextView wideTile(String title,String subtitle,String icon,Runnable click) {
-        TextView b=label(icon+"  "+title+"\n     "+subtitle,12,true,Color.WHITE);
-        b.setLineSpacing(d(4),1f);b.setPadding(d(13),d(8),d(9),d(8));
-        b.setBackground(glass(0xA1435C7C,18));b.setOnClickListener(v->click.run());return b;
+    private View wideTile(String title,String subtitle,String icon,Runnable click) {
+        LinearLayout row=horizontal();row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(d(12),d(10),d(12),d(10));
+        row.setBackground(glass(0x94546477,18));
+        row.addView(new GlyphIcon(activity,icon),new LinearLayout.LayoutParams(d(33),d(33)));
+        LinearLayout captions=vertical();captions.setPadding(d(7),0,0,0);
+        captions.addView(label(title,12,true,Color.WHITE));
+        captions.addView(label(subtitle,10,false,white(200)));
+        row.addView(captions);
+        row.setOnClickListener(v->click.run());return row;
+    }
+    /** Canvas-drawn vectors keep the quick controls consistent on all Android devices. */
+    private static final class GlyphIcon extends View {
+        final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
+        final String symbol;
+        GlyphIcon(Context ctx,String symbol){super(ctx);this.symbol=symbol;setContentDescription(symbol);}
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.save();canvas.translate(getWidth()/2f,getHeight()/2f);
+            float k=Math.min(getWidth(),getHeight())/48f;canvas.scale(k,k);
+            p.setColor(Color.WHITE);p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(3.2f);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);
+            switch(symbol){
+                case "wifi":
+                    canvas.drawArc(-17,-11,17,16,222,96,false,p);
+                    canvas.drawArc(-11,-5,11,11,222,96,false,p);
+                    p.setStyle(Paint.Style.FILL);canvas.drawCircle(0,12,3,p);break;
+                case "bluetooth":
+                    Path b=new Path();b.moveTo(0,-19);b.lineTo(12,-8);b.lineTo(-11,10);
+                    b.moveTo(-11,-10);b.lineTo(12,9);b.lineTo(0,20);b.lineTo(0,-19);
+                    canvas.drawPath(b,p);break;
+                case "airplane":
+                    Path a=new Path();a.moveTo(0,-20);a.lineTo(4,-4);a.lineTo(18,4);
+                    a.lineTo(18,9);a.lineTo(4,7);a.lineTo(4,16);a.lineTo(9,20);
+                    a.lineTo(-9,20);a.lineTo(-4,16);a.lineTo(-4,7);a.lineTo(-18,9);
+                    a.lineTo(-18,4);a.lineTo(-4,-4);a.close();p.setStyle(Paint.Style.FILL);canvas.drawPath(a,p);break;
+                case "cellular":
+                    p.setStyle(Paint.Style.FILL);
+                    for(int i=0;i<4;i++)canvas.drawRoundRect(-17+i*9,12-i*7,-11+i*9,18,2,2,p);break;
+                case "torch":
+                    Path t=new Path();t.moveTo(-9,-19);t.lineTo(9,-19);t.lineTo(9,-6);
+                    t.lineTo(5,2);t.lineTo(5,18);t.lineTo(-5,18);t.lineTo(-5,2);t.lineTo(-9,-6);t.close();
+                    canvas.drawPath(t,p);canvas.drawLine(-9,-9,9,-9,p);break;
+                case "moon":
+                    p.setStyle(Paint.Style.FILL);canvas.drawCircle(0,0,15,p);
+                    p.setColor(0xFF586578);canvas.drawCircle(8,-6,15,p);break;
+                case "battery":
+                    canvas.drawRoundRect(-17,-10,14,10,4,4,p);
+                    p.setStyle(Paint.Style.FILL);canvas.drawRect(-12,-5,7,5,p);canvas.drawRect(16,-4,19,4,p);break;
+                case "settings":
+                    canvas.drawCircle(0,0,9,p);canvas.drawCircle(0,0,3,p);
+                    for(int i=0;i<8;i++){double r=i*Math.PI/4;canvas.drawLine((float)(Math.cos(r)*13),(float)(Math.sin(r)*13),(float)(Math.cos(r)*19),(float)(Math.sin(r)*19),p);}break;
+                case "bell":
+                    Path bell=new Path();bell.moveTo(-12,8);bell.lineTo(-8,2);bell.lineTo(-8,-6);
+                    bell.cubicTo(-8,-20,8,-20,8,-6);bell.lineTo(8,2);bell.lineTo(12,8);bell.close();
+                    canvas.drawPath(bell,p);canvas.drawArc(-4,7,4,15,0,180,false,p);break;
+                case "brightness":
+                    canvas.drawCircle(0,0,8,p);
+                    for(int i=0;i<8;i++){double r=i*Math.PI/4;canvas.drawLine((float)(Math.cos(r)*13),(float)(Math.sin(r)*13),(float)(Math.cos(r)*19),(float)(Math.sin(r)*19),p);}break;
+                default:canvas.drawCircle(0,0,12,p);
+            }
+            canvas.restore();
+        }
     }
     private float getVolume() {
         if(audio==null)return .4f;
