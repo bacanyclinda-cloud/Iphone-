@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      - 'tools/**'
       - '*.gradle'
       - 'gradle.properties'
       - '.github/workflows/android-apk.yml'
@@ -24,14 +25,24 @@ jobs:
           java-version: '17'
       - name: Install Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Install Android platform
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Generate 120 original offline wallpapers
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check 'numpy>=1.24,<3' 'Pillow>=10,<13'
+          python3 tools/generate_wallpapers.py --output app/src/main/assets/wallpapers --count 120
+          du -sh app/src/main/assets/wallpapers
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
       - name: Compile installable debug APK
-        run: gradle --no-daemon --stacktrace assembleDebug
+        run: gradle --no-daemon assembleDebug
+      - name: Verify APK size and contents
+        run: |
+          ls -lh app/build/outputs/apk/debug/app-debug.apk
+          test $(stat -c%s app/build/outputs/apk/debug/app-debug.apk) -gt 100000000
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E 'wallpapers/wall_119.jpg|classes.dex'
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
