@@ -1,6 +1,6 @@
 # Velocity Launcher — Native Android project
 
-This is native Android application source code, **not an HTML prototype**. It is an early functional launcher project, not an iOS clone or a finished production release.
+This is native Android application source code, **not an HTML prototype**. Version **0.2.0** includes a redesigned home screen, a native Control Centre and locally generated original wallpapers. It is an early functional launcher project, not an iOS clone or a finished production release.
 
 ## Implemented in this source
 
@@ -10,6 +10,8 @@ This is native Android application source code, **not an HTML prototype**. It is
 - Launches installed apps, searches apps, and supports horizontal paging.
 - User-selected photos from the system picker, current device wallpaper, multiple built-in gradient backgrounds, and optional online car photo wallpapers (downloaded and cached after choice, requiring Internet).
 - First-run setup, notification access shortcut, and Android Home-role request.
+- iPhone-inspired **Control Centre** with real media volume slider, brightness control, rear torch control, Focus / Do Not Disturb (with Android approval), and links to Wi-Fi/Bluetooth/mobile/flight mode system settings. Swipe down from the top-right of Home; top-left opens notifications.
+- **24 original offline glass-style wallpapers** generated natively on the device, plus 10 optional online car photos and user photo import.
 - Local **NotificationListenerService** displays real active notifications in a scrollable custom panel when permission is granted; notification taps attempt to open their corresponding content intents.
 - Dynamic Island-style custom view uses `DisplayCutout` bounding rectangles where available, plus manual correction sliders. Exact camera-hole geometry varies by device, and calibration may be required.
 - Real camera torch control via `CameraManager` when a flash is present and the user grants camera access.
