@@ -65,11 +65,33 @@ jobs:
           print("Verified",len(list(d.glob("*.webp"))),"offline artwork files.")
           PY
 
+      - name: Configure dependency mirror fallback (temporary Maven disruption)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("native-source/settings.gradle.kts")
+          s=p.read_text()
+          s=s.replace('repositories { google(); mavenCentral(); gradlePluginPortal() }',
+                      'repositories { maven("https://maven.aliyun.com/repository/gradle-plugin"); maven("https://maven.aliyun.com/repository/google"); maven("https://maven.aliyun.com/repository/public"); google(); mavenCentral(); gradlePluginPortal() }')
+          s=s.replace('repositories { google(); mavenCentral() }',
+                      'repositories { maven("https://maven.aliyun.com/repository/public"); maven("https://maven.aliyun.com/repository/google"); google(); mavenCentral() }')
+          p.write_text(s)
+          PY
+      - name: Cache Gradle dependencies
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.7.1'
+
       - name: Compile optimized installable native Android APK
         working-directory: native-source
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon --stacktrace :app:assembleFast
+          for attempt in 1 2 3; do
+            echo "Gradle build attempt $attempt of 3"
+            if ./gradlew --no-daemon --stacktrace :app:assembleFast; then exit 0; fi
+            sleep 20
+          done
+          exit 1
 
       - name: Validate Android application artifact
         run: |
