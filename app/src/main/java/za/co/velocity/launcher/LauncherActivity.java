@@ -77,7 +77,10 @@ public final class LauncherActivity extends Activity {
     private static final String PREFS = "velocity_prefs";
     private static final String[] THEMES = {
         "Original device wallpaper", "Midnight blue", "Graphite", "Aurora", "Dusk", "Ocean",
-        "Sandstone", "Amethyst", "Deep green", "Steel", "Copper", "Monochrome"
+        "Sandstone", "Amethyst", "Deep green", "Steel", "Copper", "Monochrome",
+        "Blue Prism", "Violet Glass", "Blue Horizon", "Crystal Waves", "Midnight Sapphire",
+        "Purple Haze", "Azure Drift", "Sky Blue", "Pearl Blue", "Royal Indigo",
+        "Aqua Glow", "Cosmic Violet"
     };
     // Downloadable HTTPS photos; downloaded and cached only when the user chooses one.
     private static final String[] PHOTO_IDS = {
@@ -97,6 +100,7 @@ public final class LauncherActivity extends Activity {
     private TouchRoot root;
     private ImageView wallpaper;
     private FrameLayout island, panel, setupLayer;
+    private ControlCenterOverlay controlCenter;
     private TextView islandLabel, statusTime, statusBattery, widgetTime, widgetBattery, cutoffLabel;
     private LinearLayout panelContent;
     private SnapPager pager;
@@ -196,6 +200,7 @@ public final class LauncherActivity extends Activity {
     }
     @Override public void onBackPressed() {
         if (setupLayer != null && setupLayer.getVisibility() == View.VISIBLE) return;
+        if (controlCenter != null && controlCenter.opened()) { controlCenter.close(); return; }
         if (panel != null && panel.getVisibility() == View.VISIBLE) { panel.setVisibility(View.GONE); return; }
         if (pager != null) pager.goTo(0);
     }
@@ -283,6 +288,14 @@ public final class LauncherActivity extends Activity {
         buildDock(); buildStatusBar(); buildIsland();
         panel = new FrameLayout(this); panel.setVisibility(View.GONE);
         root.addView(panel,fl(-1,-1,Gravity.FILL));
+        controlCenter = new ControlCenterOverlay(this,new ControlCenterOverlay.Callbacks() {
+            @Override public void onTorch() { toggleTorch(); }
+            @Override public boolean isTorchOn() { return torchEnabled; }
+            @Override public void onNotifications() { showNotifications(); }
+            @Override public void onOpenMusic() { openMusicApp(); }
+            @Override public void onAndroidSettings() { openSystemSettings(); }
+        });
+        root.addView(controlCenter,fl(-1,-1,Gravity.FILL));
         setupLayer = new FrameLayout(this); setupLayer.setVisibility(View.GONE);
         root.addView(setupLayer,fl(-1,-1,Gravity.FILL));
         root.setOnApplyWindowInsetsListener((v,insets)->{
@@ -313,31 +326,39 @@ public final class LauncherActivity extends Activity {
     }
     private View homePage() {
         LinearLayout body=pageBase();
-        TextView kicker=text("VELOCITY  /  HOME",11,true,white(195)); kicker.setLetterSpacing(.17f); body.addView(kicker);
-        TextView title=text("Your space. Your drive.",27,true,Color.WHITE);
-        LinearLayout.LayoutParams tp=ll(-1,d(46));tp.topMargin=d(6); body.addView(title,tp);
-        TextView sub=text(new SimpleDateFormat("EEEE, d MMMM",Locale.getDefault()).format(new Date()),13,false,white(210));
-        body.addView(sub);
-        addSpace(body,20);
+        body.setPadding(d(21),d(75),d(21),d(135));
+        TextView date=text(new SimpleDateFormat("EEEE, d MMMM",Locale.getDefault()).format(new Date()),14,true,white(226));
+        date.setShadowLayer(d(3),0,d(2),Color.BLACK);body.addView(date);
+        addSpace(body,18);
         LinearLayout widgets=row();
-        widgets.addView(widget("CLOCK","--:--","Local time"),new LinearLayout.LayoutParams(0,d(118),1));
+        widgets.addView(widget("CLOCK","--:--","Local time"),new LinearLayout.LayoutParams(0,d(124),1));
         View gap=new View(this);widgets.addView(gap,ll(d(11),1));
-        widgets.addView(widget("BATTERY","--%","Your phone"),new LinearLayout.LayoutParams(0,d(118),1));
+        widgets.addView(widget("BATTERY","--%","This device"),new LinearLayout.LayoutParams(0,d(124),1));
         body.addView(widgets);
-        addSpace(body,145);
+        addSpace(body,21);
         LinearLayout headingRow=row();
-        headingRow.addView(text("Your apps",14,true,Color.WHITE),new LinearLayout.LayoutParams(0,-2,1));
-        TextView all=text("All apps   ›",13,true,white(220)); all.setOnClickListener(v->pager.goTo(1)); headingRow.addView(all);
-        body.addView(headingRow);addSpace(body,16);
-        List<ResolveInfo> homeApps=installed.subList(0,Math.min(12,installed.size()));
+        headingRow.addView(text("Home",14,true,Color.WHITE),new LinearLayout.LayoutParams(0,-2,1));
+        TextView all=text("All Apps  ›",13,true,white(236));all.setOnClickListener(v->pager.goTo(1));headingRow.addView(all);
+        body.addView(headingRow);addSpace(body,14);
+        // Use real installed launchable app icons, in familiar phone-first order.
+        List<ResolveInfo> homeApps=new ArrayList<>();
+        String[] favourites={"phone","message","whatsapp","camera","photos","gallery","chrome","settings",
+                "clock","calculator","maps","youtube","spotify","music","files","calendar","contacts","play store","gmail","weather"};
+        for(String term:favourites){
+            for(ResolveInfo info:installed){
+                String name=info.loadLabel(getPackageManager()).toString().toLowerCase(Locale.ROOT);
+                if(name.contains(term) && !homeApps.contains(info)){homeApps.add(info);break;}
+            }
+        }
+        for(ResolveInfo info:installed){if(homeApps.size()>=20)break;if(!homeApps.contains(info))homeApps.add(info);}
         body.addView(iconsGrid(homeApps));
-        addSpace(body,12);
-        body.addView(action("Launcher settings  ›", v->pager.goTo(3)));
+        addSpace(body,13);
+        body.addView(action("Wallpaper & Home settings",v->pager.goTo(3)));
         return scroll(body);
     }
     private View widget(String title,String value,String note) {
         LinearLayout box=column();box.setPadding(d(15),d(14),d(12),d(12));
-        box.setBackground(shape(parse("#505C7080"),23,white(38)));
+        box.setBackground(gradient(parse("#99657EAA"),parse("#8E1D2D56"),23));
         TextView a=text(title,10,true,white(210));a.setLetterSpacing(.10f);box.addView(a);
         TextView b=text(value,27,true,Color.WHITE);LinearLayout.LayoutParams bp=ll(-1,d(44));bp.topMargin=d(5);box.addView(b,bp);
         if (title.equals("CLOCK")) widgetTime=b;
@@ -375,6 +396,8 @@ public final class LauncherActivity extends Activity {
         addSpace(body,24);
         body.addView(settingsRow("Flashlight", "Toggle the phone camera torch", "Turn on", v->toggleTorch()));
         addSpace(body,12);
+        body.addView(settingsRow("Control Centre", "Brightness, volume, torch and Android quick settings", "Open", v->showControlCenter()));
+        addSpace(body,12);
         body.addView(settingsRow("Notifications", "Read real notifications after permission", "Open", v->showNotifications()));
         addSpace(body,12);
         body.addView(settingsRow("App drawer", "All apps installed on the device", "Browse", v->pager.goTo(1)));
@@ -407,10 +430,14 @@ public final class LauncherActivity extends Activity {
         addSpace(body,10);
         body.addView(settingsRow("Notification access", "Allow reading active local Android notifications", "Grant", v->requestNotificationAccess()));
         addSpace(body,10);
+        body.addView(settingsRow("Control Centre", "Open the interactive quick controls", "Open", v->showControlCenter()));
+        addSpace(body,10);
+        body.addView(settingsRow("Full brightness permission", "Allow the slider to set brightness outside the launcher", "Grant", v->requestBrightnessPermission()));
+        addSpace(body,10);
         body.addView(settingsRow("System Settings", "Open your phone's actual Settings app", "Open", v->openSystemSettings()));
         addSpace(body,25);
         body.addView(text("WALLPAPERS",12,true,white(225)));addSpace(body,8);
-        body.addView(text("12 offline choices, 10 optional photo wallpapers, and your own gallery photos.",12,false,white(190)));
+        body.addView(text("24 original offline glass wallpapers, 10 downloadable car photos, and your gallery.",12,false,white(190)));
         addSpace(body,11);
         body.addView(wallpaperPicker());addSpace(body,10);
         body.addView(action("Choose photo from my gallery",v->openGallery()));addSpace(body,11);
@@ -460,9 +487,12 @@ public final class LauncherActivity extends Activity {
         for(int i=0;i<THEMES.length+PHOTO_IDS.length;i++){
             final int index=i;
             LinearLayout item=column();item.setGravity(Gravity.CENTER_HORIZONTAL);
-            View thumb=new View(this);
-            if(i<THEMES.length)thumb.setBackground(gradient(themeColors(i)[0],themeColors(i)[1],15));
-            else thumb.setBackground(gradient(parse("#506A83"),parse("#10131A"),15));
+            ImageView thumb=new ImageView(this);thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            if(i<THEMES.length) thumb.setImageDrawable(WallpaperArtwork.preview(this,themeColors(i),i));
+            else thumb.setImageDrawable(WallpaperArtwork.preview(this,
+                    new int[]{parse("#506A83"),parse("#10131A")},i));
+            thumb.setBackground(shape(parse("#33435B"),16,white(80)));
+            thumb.setClipToOutline(true);
             item.addView(thumb,ll(d(83),d(108)));
             TextView lbl=text(i<THEMES.length?THEMES[i]:"Car photo "+(i-THEMES.length+1),10,false,white(225));
             lbl.setMaxLines(2);lbl.setGravity(Gravity.CENTER);LinearLayout.LayoutParams l=ll(d(91),d(35));l.topMargin=d(6);item.addView(lbl,l);
@@ -477,7 +507,11 @@ public final class LauncherActivity extends Activity {
             {"#182330","#06070A"},{"#325D93","#080F22"},{"#555F69","#090B10"},
             {"#0E8B8E","#14104E"},{"#CE7B75","#2A1B3A"},{"#2C99B3","#0C2B58"},
             {"#E1A989","#5C3E42"},{"#A084C7","#21143D"},{"#37806B","#0A2923"},
-            {"#8195AB","#202936"},{"#A36E44","#28191B"},{"#4D5662","#07080A"}};
+            {"#8195AB","#202936"},{"#A36E44","#28191B"},{"#4D5662","#07080A"},
+            {"#2282E5","#161C76"},{"#8545F0","#130C56"},{"#16B5E0","#18366C"},
+            {"#45ADEF","#192F75"},{"#2355B6","#080C41"},{"#9A60E7","#30126C"},
+            {"#3DBAE8","#134F9E"},{"#7CC9FF","#2C4FB2"},{"#C3E9FA","#5879C0"},
+            {"#617DF0","#1A236C"},{"#40E0CF","#1446A1"},{"#8A53C9","#110D4E"}};
         int k=Math.max(0,Math.min(palette.length-1,t));
         return new int[]{parse(palette[k][0]),parse(palette[k][1])};
     }
@@ -487,7 +521,7 @@ public final class LauncherActivity extends Activity {
     }
     private void renderWallpaper() {
         if(wallpaper == null)return;
-        String selected=preferences.getString("wallpaper","theme:0");
+        String selected=preferences.getString("wallpaper","theme:12");
         if(selected.startsWith("photo:")){
             try {
                 int index=Integer.parseInt(selected.substring(6));
@@ -509,7 +543,7 @@ public final class LauncherActivity extends Activity {
                 if(original!=null){wallpaper.setImageDrawable(original);return;}
             }catch(Exception ignored){}
         }
-        wallpaper.setImageDrawable(gradient(themeColors(index)[0],themeColors(index)[1],0));
+        wallpaper.setImageDrawable(WallpaperArtwork.render(this,themeColors(index),index));
     }
     private void loadPhoto(int i) {
         File file = new File(getFilesDir(),"photo_"+i+".jpg");
@@ -577,7 +611,10 @@ public final class LauncherActivity extends Activity {
         statusBattery.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);status.addView(statusBattery);
         root.addView(status,sp);
         status.setOnTouchListener((v,e)->{
-            if(e.getActionMasked()==MotionEvent.ACTION_UP){showNotifications();return true;}
+            if(e.getActionMasked()==MotionEvent.ACTION_UP){
+                if(e.getX()>v.getWidth()*.53f)showControlCenter();else showNotifications();
+                return true;
+            }
             return true;
         });
         refreshStatus();
@@ -601,9 +638,11 @@ public final class LauncherActivity extends Activity {
         islandLabel=text("",10,true,parse("#89EDBE"));islandLabel.setGravity(Gravity.CENTER);
         islandLabel.setLetterSpacing(.05f);island.addView(islandLabel,fl(-1,-1,Gravity.FILL));
         island.setOnClickListener(v->{
-            if(islandExpanded){islandExpanded=false;alignIsland();}
-            else {islandExpanded=true;alignIsland();showNotifications();}
+            islandExpanded=!islandExpanded;
+            alignIsland();refreshIsland();
+            if(islandExpanded)handler.postDelayed(()->{islandExpanded=false;alignIsland();refreshIsland();},3500);
         });
+        island.setOnLongClickListener(v->{showNotifications();return true;});
         refreshIsland();root.post(this::alignIsland);
     }
     private void refreshIsland() {
@@ -619,7 +658,8 @@ public final class LauncherActivity extends Activity {
                 headline=title==null?null:title.toString();
             }
         }
-        String result=torchEnabled?"● TORCH ON":count>0?"● "+count+" NOTIFICATIONS":"● VELOCITY";
+        String result=islandExpanded?(torchEnabled?"Flashlight is on":headline!=null?headline:"No live activities"):
+                torchEnabled?"● TORCH ON":count>0?"● "+count+" ALERTS":"● VELOCITY";
         islandLabel.setText(result);
         islandLabel.setContentDescription(headline==null?result:headline);
     }
@@ -627,8 +667,8 @@ public final class LauncherActivity extends Activity {
         if(island==null||root==null||root.getWidth()==0)return;
         int baseWidth=foundCutout?Math.max(d(114),physicalCutout.width()+d(24)):d(132);
         int baseHeight=foundCutout?Math.max(d(34),physicalCutout.height()+d(7)):d(36);
-        int width=islandExpanded?d(260):Math.max(d(95),baseWidth+d(preferences.getInt("w",0)));
-        int height=islandExpanded?d(60):Math.max(d(28),baseHeight+d(preferences.getInt("h",0)));
+        int width=islandExpanded?Math.min(root.getWidth()-d(48),d(285)):Math.max(d(95),baseWidth+d(preferences.getInt("w",0)));
+        int height=islandExpanded?d(77):Math.max(d(28),baseHeight+d(preferences.getInt("h",0)));
         int center=foundCutout?physicalCutout.centerX():root.getWidth()/2;
         int x=center-width/2+d(preferences.getInt("x",0));
         int y=(foundCutout?Math.max(0,physicalCutout.top-d(3)):d(8))+d(preferences.getInt("y",0));
@@ -640,6 +680,30 @@ public final class LauncherActivity extends Activity {
             "Detected camera cutout: "+physicalCutout.width()+" × "+physicalCutout.height()+" physical px":"Camera cutout not reported by Android. Manual alignment is available.");
     }
 
+    private void showControlCenter() {
+        if(controlCenter==null)return;
+        if(panel!=null)panel.setVisibility(View.GONE);
+        controlCenter.open(wallpaper==null?null:wallpaper.getDrawable());
+    }
+    private void requestBrightnessPermission() {
+        if(Settings.System.canWrite(this)){toast("Screen brightness permission already granted");return;}
+        try{
+            Intent i=new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                    Uri.parse("package:"+getPackageName()));
+            startActivity(i);
+        }catch(Exception ignored){toast("Please grant Modify system settings in Android Settings");}
+    }
+    private void openMusicApp() {
+        for(String term:new String[]{"music","spotify","youtube music","soundcloud"}) {
+            for(ResolveInfo info:installed){
+                if(info.loadLabel(getPackageManager()).toString().toLowerCase(Locale.ROOT).contains(term)){
+                    launchApp(info);return;
+                }
+            }
+        }
+        try{startActivity(new Intent(android.provider.MediaStore.INTENT_ACTION_MUSIC_PLAYER));}
+        catch(Exception e){toast("Install a music app to use this shortcut");}
+    }
     private void showNotifications() {
         if(panel==null)return;
         panel.removeAllViews();panel.setVisibility(View.VISIBLE);
@@ -766,12 +830,17 @@ public final class LauncherActivity extends Activity {
         addSpace(body,19);body.addView(text("Make this phone yours.",34,true,Color.WHITE));
         addSpace(body,11);TextView detail=text("A real Android home launcher, fitted to your display and built around your installed apps.",15,false,white(215));
         detail.setLineSpacing(d(5),1f);body.addView(detail);addSpace(body,33);
-        body.addView(settingsRow("1. Display & camera", "We will read your available display-cutout geometry. Fine-tuning is in Settings.","OK",v->{
+        android.util.DisplayMetrics metrics=getResources().getDisplayMetrics();
+        body.addView(text("Screen: "+metrics.widthPixels+" × "+metrics.heightPixels+" px  ·  Density: "+metrics.densityDpi+" dpi",12,false,white(210)));
+        addSpace(body,11);
+        body.addView(settingsRow("1. Display & camera", "Camera-cutout auto-detection. Fine-tune in Settings if the phone reports only a rough rectangle.","Check",v->{
             toast(foundCutout?"Display cutout detected":"No cutout reported; manual alignment available");
         }));addSpace(body,13);
         body.addView(settingsRow("2. Notification access", "Enable to populate the custom notification panel with real alerts.","Grant",v->requestNotificationAccess()));
         addSpace(body,13);
         body.addView(settingsRow("3. Default Home", "Choose Velocity as your default Android launcher.","Select",v->requestHomeRole()));
+        addSpace(body,13);
+        body.addView(settingsRow("4. Control Centre", "Swipe down from the top-right for quick controls. Top-left opens alerts.","Open",v->showControlCenter()));
         addSpace(body,27);
         body.addView(text("Choose wallpaper after setup",13,true,white(210)));addSpace(body,10);
         body.addView(wallpaperPicker());addSpace(body,23);
@@ -791,7 +860,9 @@ public final class LauncherActivity extends Activity {
                 float dy=e.getY()-startY,dx=e.getX()-startX;
                 started=false;
                 if(startY<d(82)&&dy>d(64)&&Math.abs(dy)>Math.abs(dx)*1.25f){
-                    if(setupLayer==null||setupLayer.getVisibility()!=View.VISIBLE)showNotifications();
+                    if(setupLayer==null||setupLayer.getVisibility()!=View.VISIBLE){
+                        if(startX>getWidth()*.52f)showControlCenter();else showNotifications();
+                    }
                     return true;
                 }
             }
