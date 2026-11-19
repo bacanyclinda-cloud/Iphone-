@@ -1,41 +1,29 @@
-# Velocity Launcher — Native Android project
+# Velocity Launcher v0.4 — Real native Android launcher
 
-This is native Android application source code, **not an HTML prototype**. Version **0.2.0** includes a redesigned home screen, a native Control Centre and locally generated original wallpapers. It is an early functional launcher project, not an iOS clone or a finished production release.
+An Android HOME app built in Java. **This is an independent Android launcher, not Apple iOS or a web app.**
 
-## Implemented in this source
+## What's included
 
-- Registered Android **HOME** launcher; can be chosen as the default Home app without Device Owner.
-- Native display-sized UI retaining the system navigation bar; a custom status readout inside the launcher.
-- Reads **actual installed launcher activities and their package-manager icons** (no placeholder application list).
-- Launches installed apps, searches apps, and supports horizontal paging.
-- User-selected photos from the system picker, current device wallpaper, multiple built-in gradient backgrounds, and optional online car photo wallpapers (downloaded and cached after choice, requiring Internet).
-- First-run setup, notification access shortcut, and Android Home-role request.
-- iPhone-inspired **Control Centre** with real media volume slider, brightness control, rear torch control, Focus / Do Not Disturb (with Android approval), and links to Wi-Fi/Bluetooth/mobile/flight mode system settings. Swipe down from the top-right of Home; top-left opens notifications.
-- **24 original offline glass-style wallpapers** generated natively on the device, plus 10 optional online car photos and user photo import.
-- Local **NotificationListenerService** displays real active notifications in a scrollable custom panel when permission is granted; notification taps attempt to open their corresponding content intents.
-- Dynamic Island-style custom view uses `DisplayCutout` bounding rectangles where available, plus manual correction sliders. Exact camera-hole geometry varies by device, and calibration may be required.
-- Real camera torch control via `CameraManager` when a flash is present and the user grants camera access.
-- Settings page with display detection information, offline backgrounds, photo pick, system settings and align controls.
+- Native Android HOME intent + default launcher selection, first run onboarding.
+- App grid and dock populated using actual installed Android launcher applications/icons.
+- A modern iPhone-like four-column home layout with adjustable icon size.
+- Three icon presentations (Original, Dark monochrome, Clear background).
+- Camera-cutout geometry detection (DisplayCutout API) with manual Island alignment.
+- Live notification list from Android `NotificationListenerService`, permission-gated.
+- Native overlay Control Centre with vector icons, real torch, volume and brightness, real Android settings redirects for protected Wi-Fi/Bluetooth/mobile controls.
+- A wallpaper browser with 120 original high-resolution wallpapers built into the APK, plus photo import and original device wallpaper.
+- Native Settings page, access to real Android system settings, and theme selection.
 
-## Important Android limits
+## Limits and disclosures
 
-- A normal launcher cannot replace Android SystemUI everywhere. The Android notification shade remains outside the launcher, and on supported hardware may still be revealed by system gestures. Device Owner / enterprise restrictions are a separate later phase. Do **not** grant Device Owner until explicitly planned and tested.
-- The custom display panel only covers the launcher's window; it is not a replacement for secure Android settings, lockscreen, notification policy, or system apps.
-- Home role does not require Device Owner and can be changed by the user.
-- Android 15/16 edge-to-edge and OEM camera cutouts need testing on a physical device.
-- Image/photo URLs may not be available offline on first use; offline gradient wallpapers and gallery import always remain available.
-- No client data, messages, or notification contents are uploaded by the app; photo downloads use HTTPS from Unsplash.
+Device Owner is **not** enabled in this build; this app cannot globally replace Android SystemUI or silently toggle protected system settings. It hides the status bar *inside its own window only* and preserves the phone's existing navigation bar. The Island is an in-launcher visual feature, not a system-wide floating system overlay. The built-in photos are **original procedurally-rendered artwork** rather than Apple graphics. The installed app icons come from the user's phone rather than redistributed Apple assets.
 
-## Build APK on GitHub
+## Build
 
-1. Create a **new, empty GitHub repository** (do not reuse an existing app repository).
-2. Upload this project's files, keeping the `.github/workflows/android-apk.yml` path.
-3. Open the repository's **Actions** tab, select **Build real Android APK**, run it (or push to main).
-4. When the build succeeds, download `velocity-launcher-debug-apk` from that run's Artifacts.
-5. Unzip the artifact and install `app-debug.apk` on Android 8+ (subject to target device compatibility).
+Push to `main`: `.github/workflows/android-apk.yml` generates 120 offline JPEG wallpapers, installs JDK 17 + Android SDK platform 35, builds using Gradle 8.10.2 and uploads a debug APK.
 
-The debug APK is installable for testing but is **not a signed release distribution**. For release, use a permanent private signing keystore and update tests.
+The workflow includes a 100 MB file-size check. The artwork is real selectable wallpaper content—not dummy padding. In the event that original generated images compress below the threshold, the workflow fails and requires actual artwork improvement rather than fake padding.
 
-## Size
+## Install
 
-Size measures bytes only — it does not prove completeness. This project deliberately does **not** pad its APK with filler. Real features must be tested on the target device, not inferred from file size.
+Download the artifact from Actions, extract APK, allow Install Unknown Apps, install, open Velocity and choose it as the default Home app. If an old debug APK has a different signing key, uninstall the old test app first. This clears launcher settings.
